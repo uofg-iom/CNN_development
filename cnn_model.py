@@ -22,15 +22,15 @@ dataset_path = "00 - Datasets split by class - Watermark Removed"
 
 class SkinTypeModel():
     
-    def __init__(self, path, image_x = 300, image_y = 300, batch_size = 32):
-        self.dataset_path = path
-        
+    def __init__(self, ds_path, model_cb_path, image_x = 300, image_y = 300, batch_size = 32):
         
         # Load dataset as TensorFlow Dataset Object
         # Shuffle argument shuffles all images in all classes and places them into batches
         # If shuffle is false, then the data is placed into batches based on the order in which they are loaded 
         # Image size downsizes the image to the specified resolution, it doesn't crop
         # If crop_to_aspect_ratio is selected then the image is cropped
+        self.dataset_path = ds_path
+        self.model_path = model_cb_path
         self.rescale_image_size = (image_x, image_y)
         self.ds_batch_size = batch_size
 
@@ -132,8 +132,70 @@ class SkinTypeModel():
                 classes=num_classes,
                 classifier_activation="softmax")(x)
             
+        self.built_model = tf.keras.Model(inputs, outputs)
+        return self.built_model
+
+    def train_model(self, epochs = 2, steps_per_epoch = 2):
+        # Adding callbacks to store the model while it is being trained.
+        # Models is saved at the start and end of each batch and epoch
+        callbacks = [
+            tf.keras.callbacks.ModelCheckpoint(
+                filepath= self.model_path + 'model_epoch_{epoch}',
+                save_freq='epoch')
+        ]
         
-        return tf.keras.Model(inputs, outputs)
+        # If asynchronous, train the dataset before passing to the model
+        # If you're training on CPU, this is the better option, since it makes data augmentation asynchronous and non-blocking.
+        if(not SYNCHRONOUS_AUGM):
+            # Might need to use image data generate class so that the augmented images are kept
+            augmented_train_ds = self.train_ds.map(
+                lambda x, y: (self.data_augmentation(x, training=True), y),
+                num_parallel_calls=tf.data.AUTOTUNE)
+            
+        # Prefetching samples in GPU memory helps maximize GPU utilization.
+        train_ds = self.train_ds.prefetch(tf.data.AUTOTUNE)
+        val_ds = self.val_ds.prefetch(tf.data.AUTOTUNE)
+
+        # --------- Specify Optimizer and Loss function ---------
+        self.built_model.compile(
+            optimizer=tf.keras.optimizers.Adam(1e-3),
+            loss="sparse_categorical_crossentropy",
+            metrics=[tf.keras.metrics.SparseCategoricalAccuracy(name="acc")],
+        )
+
+        # --------- Train model -------------
+        self.built_model.fit(
+            train_ds,
+            epochs=epochs,
+            steps_per_epoch=steps_per_epoch,
+            callbacks=callbacks,
+            validation_data=val_ds,
+        )
+        
+        return self.built_model
+        
+    def eval_model(self):
+        loss, acc = self.built_model.evaluate(self.val_ds)  # returns loss and metrics
+        print("loss: %.2f" % loss)
+        print("acc: %.2f" % acc)
+
+    def infere_model(self, test_image = None):
+        if test_image == None :    
+            img = tf.keras.preprocessing.image.load_img(
+                "00 - Datasets split by class - Watermark Removed/02 - Wrinkles/5.old-woman.jpg", target_size = self.rescale_image_size
+            )
+        else:
+            img = test_image
+            
+        img_array = tf.keras.preprocessing.image.img_to_array(img)
+        img_array = tf.expand_dims(img_array, 0)  # Create batch axis
+
+        predictions = self.built_model.predict(img_array)
+        print(predictions[0])
+        score = predictions[0]
+        print(f"This image is\n {100 * score[0]:.2f}% Acne,\n {100 * score[1]:.2f}% Wrinkles, \
+            \n {100 * score[2]:.2f}% Dry skin,\n {100 * score[3]:.2f}% Normal skin,\n {100 * score[4]:.2f}% Oily skin.")
+        
 
     def show_train_dataset(self, sel_batch = 6, num_rows = 3, num_cols = 3):
         
