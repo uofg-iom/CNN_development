@@ -18,7 +18,7 @@ class ModelType(Enum):
 # The asynchronous option is better if we are training on a CPU
 
 SYNCHRONOUS_AUGM = False
-dataset_path = "00 - Datasets split by class - Watermark Removed"
+# dataset_path = "00 - Datasets split by class - Watermark Removed"
 
 class SkinTypeModel():
     
@@ -33,9 +33,10 @@ class SkinTypeModel():
         self.model_path = model_cb_path
         self.rescale_image_size = (image_x, image_y)
         self.ds_batch_size = batch_size
+        self.built_model = None
 
         self.train_ds, self.val_ds  = tf.keras.utils.image_dataset_from_directory(
-            dataset_path,
+            self.dataset_path,
             validation_split=0.2,
             subset="both",
             batch_size=self.ds_batch_size,
@@ -45,15 +46,10 @@ class SkinTypeModel():
             shuffle=False,
             seed=100)
 
+        self._add_data_augmentation()
         self.class_names = self.train_ds.class_names
         print("Classifications: \n", self.class_names)
 
-        # For demonstration, iterate over the batches yielded by the dataset.
-        # for data, labels in train_ds:
-        #    print(data.shape)  # (64, 200, 200, 3)
-        #    print(data.dtype)  # float32
-        #    print(labels.shape)  # (64,)
-        #    print(labels.dtype)  # int32
 
     def _add_data_augmentation(self):
         # "Filters" to be applied sequentially to each image
@@ -172,6 +168,7 @@ class SkinTypeModel():
             validation_data=val_ds,
         )
         
+    def get_model(self):
         return self.built_model
         
     def eval_model(self):
@@ -191,6 +188,7 @@ class SkinTypeModel():
         img_array = tf.expand_dims(img_array, 0)  # Create batch axis
 
         predictions = self.built_model.predict(img_array)
+        
         print(predictions[0])
         score = predictions[0]
         print(f"This image is\n {100 * score[0]:.2f}% Acne,\n {100 * score[1]:.2f}% Wrinkles, \
@@ -208,6 +206,7 @@ class SkinTypeModel():
                 plt.title(self.class_names[labels[i]])
                 plt.tight_layout()
                 # plt.axis("off")
+        plt.show()
         
     
 
