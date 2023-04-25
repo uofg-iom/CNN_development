@@ -65,6 +65,8 @@ class SkinTypeModel():
             ]
         )
 
+    def load_model(self, model_path):
+        self.built_model = tf.keras.models.load_model(model_path)
 
     def build_model(self, num_classes, model_type, input_image_size = None):
         
@@ -182,7 +184,7 @@ class SkinTypeModel():
                 "00 - Datasets split by class - Watermark Removed/02 - Wrinkles/5.old-woman.jpg", target_size = self.rescale_image_size
             )
         else:
-            img = test_image
+            img = tf.keras.preprocessing.image.load_img(test_image, target_size = self.rescale_image_size)
             
         img_array = tf.keras.preprocessing.image.img_to_array(img)
         img_array = tf.expand_dims(img_array, 0)  # Create batch axis
@@ -193,6 +195,7 @@ class SkinTypeModel():
         score = predictions[0]
         print(f"This image is\n {100 * score[0]:.2f}% Acne,\n {100 * score[1]:.2f}% Wrinkles, \
             \n {100 * score[2]:.2f}% Dry skin,\n {100 * score[3]:.2f}% Normal skin,\n {100 * score[4]:.2f}% Oily skin.")
+        return score
         
 
     def show_train_dataset(self, sel_batch = 6, num_rows = 3, num_cols = 3):
