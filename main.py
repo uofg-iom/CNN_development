@@ -8,7 +8,7 @@ def main():
     trained_model_path = "D:/YEAR_5/DST5/Trained Models/trained_model_120_epoch/trained_model_120_epoch/"
     
     # Initialise the SkinTypeModel object
-    model_obj = cnn_model.SkinTypeModel(dataset_path, model_callback_path)
+    model_obj = cnn_model.SkinTypeModel(dataset_path, model_callback_path, load_ds=False)
     
     # If a pre-trained model exists, load it here
     model_obj.load_model(trained_model_path)

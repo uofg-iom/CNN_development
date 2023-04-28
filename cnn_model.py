@@ -17,12 +17,12 @@ class ModelType(Enum):
 # The synchronous option benefits from GPU acceleration, however it will be slower when run on a CPU
 # The asynchronous option is better if we are training on a CPU
 
-SYNCHRONOUS_AUGM = False
+SYNCHRONOUS_AUGM = True
 # dataset_path = "00 - Datasets split by class - Watermark Removed"
 
 class SkinTypeModel():
     
-    def __init__(self, ds_path, model_cb_path, image_x = 300, image_y = 300, batch_size = 32):
+    def __init__(self, ds_path, model_cb_path, image_x = 300, image_y = 300, batch_size = 32, load_ds = False):
         
         # Load dataset as TensorFlow Dataset Object
         # Shuffle argument shuffles all images in all classes and places them into batches
@@ -35,20 +35,21 @@ class SkinTypeModel():
         self.ds_batch_size = batch_size
         self.built_model = None
 
-        self.train_ds, self.val_ds  = tf.keras.utils.image_dataset_from_directory(
-            self.dataset_path,
-            validation_split=0.2,
-            subset="both",
-            batch_size=self.ds_batch_size,
-            image_size=self.rescale_image_size,
-            crop_to_aspect_ratio=False,
-            color_mode='rgb',
-            shuffle=False,
-            seed=100)
+        if load_ds:
+            self.train_ds, self.val_ds  = tf.keras.utils.image_dataset_from_directory(
+                self.dataset_path,
+                validation_split=0.2,
+                subset="both",
+                batch_size=self.ds_batch_size,
+                image_size=self.rescale_image_size,
+                crop_to_aspect_ratio=False,
+                color_mode='rgb',
+                shuffle=False,
+                seed=100)
 
-        self._add_data_augmentation()
-        self.class_names = self.train_ds.class_names
-        print("Classifications: \n", self.class_names)
+            self._add_data_augmentation()
+            self.class_names = self.train_ds.class_names
+            print("Classifications: \n", self.class_names)
 
 
     def _add_data_augmentation(self):
